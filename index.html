@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Interest Dashboard</title>
+<meta name="description" content="See what a starting amount becomes over time, with monthly deposits, inflation and any currency.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%230d9488'/><path d='M7 23l6-7 4 3 8-10' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/></svg>">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<main class="page">
+  <header class="masthead">
+    <div class="masthead-text">
+      <h1>Interest Dashboard</h1>
+      <p class="tagline">Enter an amount, a rate and a time. See what grows into what.</p>
+    </div>
+    <button type="button" class="ghost" id="copy-link">Copy link</button>
+  </header>
+
+  <div class="layout">
+    <section class="card inputs" aria-labelledby="inputs-title">
+      <h2 id="inputs-title">Your numbers</h2>
+
+      <div class="segmented" role="group" aria-label="What to work out">
+        <button type="button" class="segment" data-view="forward" aria-pressed="true">How much?</button>
+        <button type="button" class="segment" data-view="target" aria-pressed="false">How long?</button>
+      </div>
+
+      <div class="field">
+        <label for="principal">Starting amount</label>
+        <div class="input-prefix">
+          <span class="affix" data-symbol aria-hidden="true">$</span>
+          <input id="principal" type="number" inputmode="decimal" min="0" max="1000000000" step="100" value="10000">
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="deposit">Added each month</label>
+        <div class="input-prefix">
+          <span class="affix" data-symbol aria-hidden="true">$</span>
+          <input id="deposit" type="number" inputmode="decimal" min="0" max="100000" step="50" value="200">
+        </div>
+      </div>
+
+      <div class="field">
+        <div class="field-head">
+          <label for="rate">Annual interest rate</label>
+          <div class="input-suffix">
+            <input id="rate" type="number" inputmode="decimal" min="0" max="30" step="0.1" value="6" aria-label="Annual interest rate in percent">
+            <span class="affix" aria-hidden="true">%</span>
+          </div>
+        </div>
+        <input id="rate-range" type="range" min="0" max="30" step="0.1" value="6" aria-label="Annual interest rate slider">
+      </div>
+
+      <div class="field" id="years-field">
+        <div class="field-head">
+          <label for="years">Time</label>
+          <div class="input-suffix">
+            <input id="years" type="number" inputmode="decimal" min="0" max="60" step="1" value="10" aria-label="Time in years">
+            <span class="affix" aria-hidden="true">yrs</span>
+          </div>
+        </div>
+        <input id="years-range" type="range" min="0" max="60" step="1" value="10" aria-label="Time in years slider">
+      </div>
+
+      <div class="field" id="target-field" hidden>
+        <label for="target">Target balance</label>
+        <div class="input-prefix">
+          <span class="affix" data-symbol aria-hidden="true">$</span>
+          <input id="target" type="number" inputmode="decimal" min="0" max="1000000000" step="1000" value="50000">
+        </div>
+      </div>
+
+      <div class="row-2">
+        <div class="field">
+          <label for="inflation">Inflation</label>
+          <div class="input-suffix">
+            <input id="inflation" type="number" inputmode="decimal" min="0" max="30" step="0.1" value="2.9" aria-label="Annual inflation in percent">
+            <span class="affix" aria-hidden="true">%</span>
+          </div>
+        </div>
+        <div class="field">
+          <label for="currency">Currency</label>
+          <select id="currency">
+            <option value="USD" selected>USD $</option>
+            <option value="CAD">CAD $</option>
+            <option value="INR">INR &#8377;</option>
+          </select>
+        </div>
+      </div>
+
+      <p class="source-line" id="inflation-source">Default <a href="https://data.worldbank.org/indicator/FP.CPI.TOTL.ZG?locations=US" target="_blank" rel="noopener noreferrer">World Bank, United States CPI 2024</a> &middot; you can change it</p>
+
+      <p class="source-line" id="rate-line">Fetching today's exchange rate&hellip;</p>
+
+      <div class="field">
+        <label for="type">Interest type</label>
+        <select id="type">
+          <option value="12" selected>Compounded monthly</option>
+          <option value="1">Compounded yearly</option>
+          <option value="4">Compounded quarterly</option>
+          <option value="365">Compounded daily</option>
+          <option value="simple">Simple (no compounding)</option>
+        </select>
+      </div>
+
+      <div class="presets">
+        <span class="presets-label">Start from</span>
+        <div class="chips">
+          <button type="button" class="chip" data-preset="plain">Plain interest</button>
+          <button type="button" class="chip" data-preset="savings">Savings account</button>
+          <button type="button" class="chip" data-preset="index">Index fund</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="card results" aria-labelledby="results-title">
+      <h2 id="results-title">What it becomes</h2>
+      <p class="result-lead" id="result-lead">Final balance after 10 years</p>
+      <p class="result-big" id="final-balance">$0</p>
+      <p class="result-alt" id="result-alt" hidden></p>
+      <p class="result-sub" id="result-summary"></p>
+
+      <div class="stat-row">
+        <div class="stat">
+          <span class="stat-label">You put in</span>
+          <span class="stat-value" id="stat-in">$0</span>
+          <span class="stat-alt" id="alt-in" hidden></span>
+        </div>
+        <div class="stat">
+          <span class="stat-label">Interest earned</span>
+          <span class="stat-value" id="stat-interest">$0</span>
+          <span class="stat-alt" id="alt-interest" hidden></span>
+        </div>
+        <div class="stat">
+          <span class="stat-label">In today's money</span>
+          <span class="stat-value" id="stat-real">$0</span>
+          <span class="stat-alt" id="alt-real" hidden></span>
+        </div>
+        <div class="stat">
+          <span class="stat-label">Growth</span>
+          <span class="stat-value" id="stat-growth">&mdash;</span>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <section class="card chart-card" aria-labelledby="chart-title">
+    <div class="chart-head">
+      <h2 id="chart-title">Growth over time</h2>
+      <button type="button" class="ghost" id="table-toggle" aria-expanded="false" aria-controls="breakdown">Year by year</button>
+    </div>
+
+    <div class="chart-wrap">
+      <svg id="chart" viewBox="0 0 720 280" preserveAspectRatio="xMidYMid meet" role="img" aria-labelledby="chart-desc"></svg>
+      <p id="chart-desc" class="sr-only">Balance over time.</p>
+    </div>
+
+    <div class="legend" aria-hidden="true">
+      <span><i class="swatch swatch-balance"></i>Balance</span>
+      <span><i class="swatch swatch-paid"></i>Money you put in</span>
+      <span><i class="swatch swatch-interest"></i>Interest (the gap between them)</span>
+    </div>
+
+    <div class="breakdown" id="breakdown" hidden></div>
+  </section>
+
+  <p class="foot-note">Estimates assume the rate stays fixed, deposits go in at the end of each month, and inflation runs at a steady rate. Amounts are rounded to whole currency units.</p>
+</main>
+
+<script src="app.js"></script>
+</body>
+</html>
